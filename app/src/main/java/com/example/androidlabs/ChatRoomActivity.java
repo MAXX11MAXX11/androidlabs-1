@@ -10,6 +10,7 @@ import android.widget.ListView;
 import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import com.example.androidlabs.database.MessageRepository;
 import com.example.androidlabs.models.Message;
 import com.example.androidlabs.models.Message.Type;
 import java.util.ArrayList;
@@ -20,16 +21,29 @@ public class ChatRoomActivity extends AppCompatActivity {
     private final List<Message> messages = new ArrayList<>();
     MessageListAdapter messageListAdapter = new MessageListAdapter();
 
+    MessageRepository messageRepository;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_chat_room);
 
+        messageRepository = new MessageRepository(this);
+
         setListeners();
+        load();
     }
 
     /**
-     * Set event listeners on Views of this Activity
+     * Loads the data from database and notifies the adapter.
+     */
+    private void load() {
+        messages.addAll(messageRepository.findAll());
+        messageListAdapter.notifyDataSetChanged();
+    }
+
+    /**
+     * Set event listeners on Views of this Activity.
      */
     private void setListeners() {
         // Set the list's adapter: how it will function.
@@ -53,10 +67,11 @@ public class ChatRoomActivity extends AppCompatActivity {
             alertDialogBuilder.
                 setTitle(getString(R.string.delete))
                 .setMessage(
-                    getString(R.string.row) + position + "\n" +
+                    getString(R.string.row) + (position + 1) + "\n" +
                         getString(R.string.database) + messageListAdapter.getItemId(position)
                 )
                 .setPositiveButton(getString(R.string.yes), (click, arg) -> {
+                    messageRepository.delete((Message) messageListAdapter.getItem(position));
                     messages.remove(position);
                     messageListAdapter.notifyDataSetChanged();
                 })
@@ -69,14 +84,14 @@ public class ChatRoomActivity extends AppCompatActivity {
     }
 
     /**
-     * Add message to messages list and notifies the adapter.
+     * Add message to messages database and list, then notifies the adapter.
      *
      * @param text the message to add
      * @param type the type of message
      */
     private void addMessage(String text, Type type) {
         Message message = new Message(text, type);
-        messages.add(message);
+        messages.add(messageRepository.save(message));
         messageListAdapter.notifyDataSetChanged();
     }
 
@@ -94,7 +109,7 @@ public class ChatRoomActivity extends AppCompatActivity {
 
         @Override
         public long getItemId(int position) {
-            return position;
+            return ((Message) getItem(position)).getId();
         }
 
         @Override
